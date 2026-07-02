@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>转债哨兵 CB Sentinel — 可转债条款博弈监控 Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@900&family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FBFAF6; --ink:#16233F; --ink-soft:#4A5670; --rule:#D8D4C8;
+    --seal:#B5382E; --amber:#B07818; --safe:#2E6E4E;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --serif:'Noto Serif SC',serif; --sans:'Noto Sans SC',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.7;font-size:15px}
+  .page{max-width:980px;margin:0 auto;padding:0 24px 80px}
+
+  .masthead{display:flex;justify-content:space-between;align-items:baseline;padding:20px 0 12px;border-bottom:3px double var(--ink);font-family:var(--mono);font-size:12px;color:var(--ink-soft);flex-wrap:wrap;gap:6px}
+  .masthead b{color:var(--ink);letter-spacing:.08em}
+  .demo-badge{background:var(--seal);color:#fff;padding:1px 8px;font-size:11px;letter-spacing:.14em}
+
+  header.hero{padding:44px 0 32px;border-bottom:1px solid var(--rule)}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.26em;color:var(--seal);margin-bottom:12px}
+  h1{font-family:var(--serif);font-weight:900;font-size:clamp(30px,5vw,44px);line-height:1.2}
+  .hero p{margin-top:14px;color:var(--ink-soft);max-width:40em}
+  .hero .q{font-weight:700;color:var(--ink)}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;padding:22px 0 6px;align-items:center}
+  .toolbar .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--ink-soft);margin-right:4px}
+  .chip{font-family:var(--mono);font-size:12.5px;border:1px solid var(--rule);background:#fff;padding:5px 14px;cursor:pointer;color:var(--ink-soft)}
+  .chip:hover{border-color:var(--ink)}
+  .chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .chip:focus-visible{outline:2px solid var(--seal);outline-offset:2px}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;margin-top:18px}
+  .card{background:#fff;border:1px solid var(--rule);padding:20px 22px;display:flex;flex-direction:column;gap:12px}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .card h3{font-size:17px;font-weight:700}
+  .card .code{font-family:var(--mono);font-size:11.5px;color:var(--ink-soft)}
+  .badge{font-family:var(--mono);font-size:11px;letter-spacing:.1em;padding:3px 10px;white-space:nowrap;border:1px solid}
+  .badge.hot{color:var(--seal);border-color:var(--seal);background:rgba(181,56,46,.06)}
+  .badge.warm{color:var(--amber);border-color:var(--amber);background:rgba(176,120,24,.07)}
+  .badge.cool{color:var(--safe);border-color:var(--safe);background:rgba(46,110,78,.06)}
+  .badge.down{color:var(--ink);border-color:var(--ink);background:rgba(22,35,63,.05)}
+
+  .metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:13.5px}
+  .metrics .k{color:var(--ink-soft);font-size:12px}
+  .metrics .v{font-family:var(--mono);font-weight:600;font-size:14.5px}
+  .v.red{color:var(--seal)} .v.amb{color:var(--amber)} .v.grn{color:var(--safe)}
+
+  .progress{margin-top:2px}
+  .progress .cap{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-bottom:4px}
+  .bar{height:8px;background:var(--paper);border:1px solid var(--rule);position:relative}
+  .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--ink)}
+  .bar.hot i{background:var(--seal)}
+  .bar.warm i{background:var(--amber)}
+
+  .alert{border-left:3px solid var(--seal);background:var(--paper);padding:10px 14px;font-size:13.5px;color:var(--ink-soft)}
+  .alert b{color:var(--ink)}
+  .alert .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--seal);display:block;margin-bottom:3px}
+
+  section.how{margin-top:56px;border-top:1px solid var(--rule);padding-top:36px}
+  h2{font-family:var(--serif);font-weight:900;font-size:22px;margin-bottom:18px}
+  .how ol{margin-left:1.3em;color:var(--ink-soft);max-width:44em}
+  .how li{margin:8px 0}
+  .how b{color:var(--ink)}
+
+  .disclaimer{margin-top:48px;font-family:var(--mono);font-size:11px;color:var(--ink-soft);border-top:3px double var(--ink);padding-top:12px}
+  a{color:var(--seal)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="masthead">
+    <span><b>转债哨兵 CB SENTINEL</b>&nbsp;·&nbsp;条款博弈监控</span>
+    <span><span class="demo-badge">DEMO · 演示数据</span>&nbsp;&nbsp;by Desmond Wu</span>
+  </div>
+
+  <header class="hero">
+    <div class="eyebrow">CONVERTIBLE BOND TERMS WATCHER</div>
+    <h1>强赎倒计时，不该只有机构看得见</h1>
+    <p>可转债的强赎、下修条款散落在公告里：<span class="q">130% 触发价、15/30 天计数、下修提议窗口</span>——机构研究员每天人工跟踪，散户往往在强赎公告后才发现自己拿着 30% 溢价的"废纸"。转债哨兵把这套条款跟踪流程自动化：输入行情与条款参数，实时计算每只转债的博弈状态，并用自然语言解释"为什么现在需要关注它"。</p>
+  </header>
+
+  <div class="toolbar" role="tablist" aria-label="状态筛选">
+    <span class="lbl">筛选</span>
+    <button class="chip active" data-f="all">全部</button>
+    <button class="chip" data-f="hot">强赎计数中</button>
+    <button class="chip" data-f="warm">接近触发</button>
+    <button class="chip" data-f="down">下修博弈</button>
+    <button class="chip" data-f="cool">暂时安全</button>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <section class="how">
+    <h2>它是怎么判断的</h2>
+    <ol>
+      <li><b>触发价计算：</b>强赎触发价 = 转股价 × 130%（按各券募集说明书条款参数化，demo 统一取 130%）；</li>
+      <li><b>计数追踪：</b>统计最近 30 个交易日中收盘价 ≥ 触发价的天数，对照"15/30"条款生成倒计时与进度；</li>
+      <li><b>溢价率监控：</b>转股溢价率 =（转债价 ÷ 转股价值 − 1），强赎临近 + 高溢价 = 最高风险组合，触发红色预警；</li>
+      <li><b>下修窗口识别：</b>当正股持续低于转股价 85% 且接近回售期，标记为下修博弈观察对象；</li>
+      <li><b>自然语言解释：</b>完整版接入 Claude API，自动解析公告原文并生成个性化预警——本 demo 中的解释文案由规则引擎实时生成，用于演示交互形态。</li>
+    </ol>
+  </section>
+
+  <div class="disclaimer">本页面为 FLOW AI 黑客松报名演示作品，所有转债名称与数据均为虚构演示数据，不构成任何投资建议。条款判断逻辑（触发价/计数/溢价率）为页面内 JavaScript 实时计算。© 2026 Desmond Wu · wuziqi0098@gmail.com</div>
+
+</div>
+
+<script>
+// ---- 演示数据（虚构）：转股价、现价、正股价、最近30日满足触发价的天数 ----
+const BONDS = [
+  {name:"恒晟转债", code:"DEMO101", convPrice:12.50, stockPrice:17.10, bondPrice:158.2, daysMet:11, rule:[15,30], nearPut:false},
+  {name:"蓝科转债", code:"DEMO102", convPrice:8.40,  stockPrice:11.30, bondPrice:142.6, daysMet:7,  rule:[15,30], nearPut:false},
+  {name:"图南转债", code:"DEMO103", convPrice:22.00, stockPrice:27.80, bondPrice:135.4, daysMet:3,  rule:[15,30], nearPut:false},
+  {name:"泽宇转债", code:"DEMO104", convPrice:15.00, stockPrice:11.20, bondPrice:104.8, daysMet:0,  rule:[15,30], nearPut:true},
+  {name:"清源转债", code:"DEMO105", convPrice:9.80,  stockPrice:7.60,  bondPrice:101.2, daysMet:0,  rule:[15,30], nearPut:true},
+  {name:"沃林转债", code:"DEMO106", convPrice:18.60, stockPrice:19.40, bondPrice:118.9, daysMet:0,  rule:[15,30], nearPut:false},
+];
+
+const fmt = (n,d=2)=>n.toFixed(d);
+
+function analyze(b){
+  const trigger = b.convPrice*1.30;                       // 强赎触发价
+  const convValue = 100/b.convPrice*b.stockPrice;         // 转股价值
+  const premium = (b.bondPrice/convValue-1)*100;          // 转股溢价率 %
+  const ratio = b.stockPrice/trigger;                     // 正股价/触发价
+  const downTrigger = b.convPrice*0.85;                   // 下修观察线
+  let status, cls, headline, advice;
+
+  if(b.daysMet>0){
+    status="强赎计数中"; cls="hot";
+    const left=b.rule[0]-b.daysMet;
+    headline=`已满足 ${b.daysMet}/${b.rule[0]} 天，最快 ${left} 个交易日触发强赎`;
+    advice = premium>15
+      ? `当前溢价率高达 ${fmt(premium,1)}%，若强赎公告落地，转债价格将向转股价值（约 ${fmt(convValue,1)} 元）回归，潜在回撤超过 ${fmt(premium,1)}%。持有者需要在触发前决策：转股或卖出。`
+      : `溢价率 ${fmt(premium,1)}% 相对可控，但计数持续推进中，需每日跟踪正股收盘价与 ${fmt(trigger)} 元触发线的关系。`;
+  } else if(ratio>=0.92){
+    status="接近触发"; cls="warm";
+    headline=`正股价已达触发价的 ${fmt(ratio*100,0)}%，随时可能进入计数`;
+    advice=`正股再涨 ${fmt((1/ratio-1)*100,1)}% 即触及 ${fmt(trigger)} 元强赎线。若看好正股继续冲高，注意溢价率（当前 ${fmt(premium,1)}%）会随强赎预期压缩。`;
+  } else if(b.nearPut && b.stockPrice<downTrigger){
+    status="下修博弈"; cls="down";
+    headline=`正股已低于转股价 85%（${fmt(downTrigger)} 元），进入下修观察窗口`;
+    advice=`临近回售期 + 正股深度低于转股价，发行人有下修动机以避免回售压力。若董事会提议下修，转债存在事件性机会；需跟踪股东大会公告。`;
+  } else {
+    status="暂时安全"; cls="cool";
+    headline=`未进入任何条款窗口`;
+    advice=`正股价 ${fmt(b.stockPrice)} 元距强赎触发线 ${fmt(trigger)} 元还有 ${fmt((trigger/b.stockPrice-1)*100,1)}% 空间，溢价率 ${fmt(premium,1)}%。维持常规跟踪频率即可。`;
+  }
+  return {trigger,convValue,premium,ratio,status,cls,headline,advice};
+}
+
+function render(filter){
+  const wrap=document.getElementById("cards");
+  wrap.innerHTML="";
+  BONDS.forEach(b=>{
+    const a=analyze(b);
+    if(filter!=="all" && a.cls!==filter) return;
+    const pct=Math.min(100, b.daysMet/b.rule[0]*100 || a.ratio*100*(a.cls==="warm"?1:0));
+    const premCls=a.premium>15?"red":a.premium>8?"amb":"grn";
+    const card=document.createElement("div");
+    card.className="card";
+    card.innerHTML=`
+      <div class="card-top">
+        <div><h3>${b.name}</h3><div class="code">${b.code} · 转股价 ${fmt(b.convPrice)} · 条款 ${b.rule[0]}/${b.rule[1]}</div></div>
+        <span class="badge ${a.cls}">${a.status}</span>
+      </div>
+      <div class="metrics">
+        <div><div class="k">转债现价</div><div class="v">${fmt(b.bondPrice,1)}</div></div>
+        <div><div class="k">转股溢价率</div><div class="v ${premCls}">${fmt(a.premium,1)}%</div></div>
+        <div><div class="k">强赎触发价</div><div class="v">${fmt(a.trigger)}</div></div>
+        <div><div class="k">正股价 / 触发价</div><div class="v">${fmt(a.ratio*100,0)}%</div></div>
+      </div>
+      ${b.daysMet>0?`
+      <div class="progress">
+        <div class="cap"><span>强赎计数进度</span><span>${b.daysMet} / ${b.rule[0]} 天</span></div>
+        <div class="bar ${a.cls}"><i style="width:${b.daysMet/b.rule[0]*100}%"></i></div>
+      </div>`:""}
+      <div class="alert"><span class="tag">哨兵预警 · SENTINEL</span><b>${a.headline}。</b>${a.advice}</div>
+    `;
+    wrap.appendChild(card);
+  });
+  if(!wrap.children.length) wrap.innerHTML='<p style="color:var(--ink-soft)">该状态下暂无标的。</p>';
+}
+
+document.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{
+  document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));
+  c.classList.add("active");
+  render(c.dataset.f);
+}));
+render("all");
+</script>
+</body>
+</html>
